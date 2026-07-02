@@ -26,6 +26,13 @@ async function setRunState(active, tabId = null) {
     });
 }
 
+async function sendCurrentPrompt(tabId) {
+    await chrome.tabs.sendMessage(tabId, {
+        action: "sendPrompt",
+        prompt: promptQueue[currentIndex]
+    });
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "generationState") {
         (async () => {
@@ -99,10 +106,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             await setRunState(true, tab.id);
 
-            await chrome.tabs.sendMessage(tab.id, {
-                action: "sendPrompt",
-                prompt: promptQueue[currentIndex]
-            });
+            await sendCurrentPrompt(tab.id);
 
             sendResponse({ ok: true });
         } catch (error) {

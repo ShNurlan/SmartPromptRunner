@@ -1,5 +1,5 @@
 chrome.runtime.onMessage.addListener((message) => {
-    if (message.action !== "sendHardcodedPrompt") {
+    if (message.action !== "sendPrompt") {
         return;
     }
 
