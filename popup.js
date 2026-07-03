@@ -1,32 +1,52 @@
-document.getElementById("start").addEventListener("click", async () => {
+const startButton = document.getElementById("start");
+const promptFile = document.getElementById("promptFile");
+const fileInfo = document.getElementById("fileInfo");
 
-    console.log("POPUP CLICK");
+let prompts = [];
 
-    try {
-        const response = await chrome.runtime.sendMessage({
-            action: "start"
-        });
+promptFile.addEventListener("change", async () => {
 
-        console.log("POPUP RESPONSE:", response);
-
-        if (!response.ok) {
-            console.error(response.error);
-        }
-    } catch (error) {
-        console.error(error);
+    if (promptFile.files.length === 0) {
+        prompts = [];
+        fileInfo.textContent = "No file selected";
+        return;
     }
+
+    const file = promptFile.files[0];
+
+    fileInfo.textContent = file.name;
+
+    const text = await file.text();
+
+    prompts = text
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+    fileInfo.textContent =
+        `${file.name} (${prompts.length} prompts)`;
 });
 
-document.getElementById("start").addEventListener("click", async () => {
+startButton.addEventListener("click", async () => {
+
     try {
+
         const response = await chrome.runtime.sendMessage({
-            action: "start"
+            action: "loadPrompts",
+            prompts
         });
 
         if (!response.ok) {
             console.error(response.error);
+            return;
         }
+
+        await chrome.runtime.sendMessage({
+            action: "start"
+        });
+
     } catch (error) {
         console.error(error);
     }
+
 });

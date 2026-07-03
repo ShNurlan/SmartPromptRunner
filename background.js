@@ -1,11 +1,7 @@
 let runActive = false;
 let runTabId = null;
 
-const promptQueue = [
-    "Prompt A",
-    "Prompt B",
-    "Prompt C"
-];
+let promptQueue = [];
 
 let currentIndex = 0;
 
@@ -72,10 +68,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+
+    if (message.action === "loadPrompts") {
+
+    promptQueue = [...message.prompts];
+
+    currentIndex = 0;
+
+    console.log(`Loaded ${promptQueue.length} prompts.`);
+
+    sendResponse({ ok: true });
+
+    return;
+}
+    
     if (message.action !== "start") {
         return;
     }
-
+    
     (async () => {
         try {
             await runStateReady;
