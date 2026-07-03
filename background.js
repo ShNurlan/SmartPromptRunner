@@ -30,6 +30,31 @@ async function sendCurrentPrompt(tabId) {
     });
 }
 
+async function handleGenerationFinished(senderTabId) {
+
+    console.log("Generation finished");
+
+    if (senderTabId !== runTabId) {
+        return;
+    }
+
+    currentIndex++;
+
+    if (currentIndex < promptQueue.length) {
+
+        console.log(
+            `Next prompt: ${promptQueue[currentIndex]}`
+        );
+
+        await sendCurrentPrompt(runTabId);
+        return;
+    }
+
+    console.log("Queue completed.");
+
+    await setRunState(false);
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("BACKGROUND:", message);
     if (message.action === "generationState") {
@@ -39,28 +64,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.state === "generating") {
                 console.log("Generation started");
             } else if (message.state === "finished") {
-    console.log("Generation finished");
-
-    if (sender.tab?.id === runTabId) {
-
-        currentIndex++;
-
-        if (currentIndex < promptQueue.length) {
-
-            console.log(
-                `Next prompt: ${promptQueue[currentIndex]}`
-            );
-
-            await sendCurrentPrompt(runTabId);
-
-        } else {
-
-            console.log("Queue completed.");
-
-            await setRunState(false);
-        } 
-    }
-}
+                await handleGenerationFinished(sender.tab?.id);
+            }
 
             sendResponse({ ok: true });
         })();
@@ -85,7 +90,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action !== "start") {
         return;
     }
-    
+
     (async () => {
         try {
             await runStateReady;

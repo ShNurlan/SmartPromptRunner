@@ -1,6 +1,8 @@
 const startButton = document.getElementById("start");
 const promptFile = document.getElementById("promptFile");
 const fileInfo = document.getElementById("fileInfo");
+const loadedCount = document.getElementById("loadedCount");
+const progress = document.getElementById("progress");
 
 let prompts = [];
 
@@ -9,6 +11,8 @@ promptFile.addEventListener("change", async () => {
     if (promptFile.files.length === 0) {
         prompts = [];
         fileInfo.textContent = "No file selected";
+        loadedCount.textContent = "0";
+        progress.textContent = "0 / 0";
         return;
     }
 
@@ -23,8 +27,8 @@ promptFile.addEventListener("change", async () => {
         .map(line => line.trim())
         .filter(line => line.length > 0);
 
-    fileInfo.textContent =
-        `${file.name} (${prompts.length} prompts)`;
+    loadedCount.textContent = prompts.length;
+    progress.textContent = `0 / ${prompts.length}`;
 });
 
 startButton.addEventListener("click", async () => {
@@ -40,6 +44,8 @@ startButton.addEventListener("click", async () => {
             console.error(response.error);
             return;
         }
+
+        progress.textContent = `1 / ${prompts.length}`;
 
         await chrome.runtime.sendMessage({
             action: "start"
