@@ -1,4 +1,4 @@
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener(async (message) => {
     if (message.action !== "sendPrompt") {
         return;
     }
@@ -15,37 +15,33 @@ chrome.runtime.onMessage.addListener((message) => {
     editor.focus();
 
     const prompt = message.prompt;
+
     const paragraph = document.createElement("p");
     paragraph.textContent = prompt;
+
     editor.replaceChildren(paragraph);
+
     editor.dispatchEvent(new InputEvent("input", {
         bubbles: true,
         inputType: "insertText",
         data: prompt
     }));
 
-    setTimeout(() => {
-        const composer = editor.closest("form") || document;
-        const sendButton = composer.querySelector(
-            'button[data-testid="send-button"], ' +
-            'button[aria-label*="send" i], ' +
-            'button[type="submit"]'
-        );
+    const sendButton = await waitForSendButton();
 
-        if (!sendButton) {
-            console.error("SmartPromptRunner: Send button not found.");
-            return;
-        }
+    if (!sendButton) {
+        console.error("SmartPromptRunner: Send button timeout.");
+        return;
+    }
 
-        sendButton.click();
-    }, 100);
+    sendButton.click();
 });
 
 const STOP_BUTTON_SELECTOR =
     'button[data-testid*="stop" i], button[aria-label*="stop" i]';
 
 let generationState = "idle";
-
+let finishReported = false;
 function detectGenerationState() {
     const stopButton = document.querySelector(STOP_BUTTON_SELECTOR);
 
@@ -68,17 +64,50 @@ function updateGenerationState() {
     }
 
     generationState = nextState;
+
     console.log(`SmartPromptRunner state: ${generationState}`);
 
-    if (
-        generationState === "generating" ||
-        generationState === "finished"
-    ) {
+    if (generationState === "generating") {
+
+        finishReported = false;
+
         chrome.runtime.sendMessage({
             action: "generationState",
-            state: generationState
+            state: "generating"
+        });
+
+        return;
+    }
+
+    if (generationState === "finished" && !finishReported) {
+
+        finishReported = true;
+
+        chrome.runtime.sendMessage({
+            action: "generationState",
+            state: "finished"
         });
     }
+}
+
+async function waitForSendButton(timeout = 2000) {
+    const start = Date.now();
+
+    while (Date.now() - start < timeout) {
+        const button = document.querySelector(
+            'button[data-testid="send-button"], ' +
+            'button[aria-label*="send" i], ' +
+            'button[type="submit"]'
+        );
+
+        if (button) {
+            return button;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 25));
+    }
+
+    return null;
 }
 
 const generationObserver = new MutationObserver(() => {

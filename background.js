@@ -27,6 +27,7 @@ async function setRunState(active, tabId = null) {
 }
 
 async function sendCurrentPrompt(tabId) {
+    console.log("BACKGROUND SEND:", currentIndex);
     await chrome.tabs.sendMessage(tabId, {
         action: "sendPrompt",
         prompt: promptQueue[currentIndex]
@@ -34,6 +35,7 @@ async function sendCurrentPrompt(tabId) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log("BACKGROUND:", message);
     if (message.action === "generationState") {
         (async () => {
             await runStateReady;
@@ -48,14 +50,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         currentIndex++;
 
         if (currentIndex < promptQueue.length) {
+
             console.log(
                 `Next prompt: ${promptQueue[currentIndex]}`
             );
-        } else {
-            console.log("Queue completed.");
-        }
 
-        await setRunState(false);
+            await sendCurrentPrompt(runTabId);
+
+        } else {
+
+            console.log("Queue completed.");
+
+            await setRunState(false);
+        } 
     }
 }
 
@@ -103,7 +110,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (!tab?.id) {
                 throw new Error("SmartPromptRunner: Active tab not found.");
             }
-
+            
+            currentIndex = 0;
+            
             await setRunState(true, tab.id);
 
             await sendCurrentPrompt(tab.id);
