@@ -1,40 +1,46 @@
-chrome.runtime.onMessage.addListener(async (message) => {
+chrome.runtime.onMessage.addListener((message) => {
+
     if (message.action !== "sendPrompt") {
         return;
     }
 
-    const editor = document.querySelector(
-        'div.ProseMirror[contenteditable="true"]'
-    );
+    (async () => {
 
-    if (!editor) {
-        console.error("SmartPromptRunner: ChatGPT editor not found.");
-        return;
-    }
+        const editor = document.querySelector(
+            'div.ProseMirror[contenteditable="true"]'
+        );
 
-    editor.focus();
+        if (!editor) {
+            console.error("SmartPromptRunner: ChatGPT editor not found.");
+            return;
+        }
 
-    const prompt = message.prompt;
+        editor.focus();
 
-    const paragraph = document.createElement("p");
-    paragraph.textContent = prompt;
+        const prompt = message.prompt;
 
-    editor.replaceChildren(paragraph);
+        const paragraph = document.createElement("p");
+        paragraph.textContent = prompt;
 
-    editor.dispatchEvent(new InputEvent("input", {
-        bubbles: true,
-        inputType: "insertText",
-        data: prompt
-    }));
+        editor.replaceChildren(paragraph);
 
-    const sendButton = await waitForSendButton();
+        editor.dispatchEvent(new InputEvent("input", {
+            bubbles: true,
+            inputType: "insertText",
+            data: prompt
+        }));
 
-    if (!sendButton) {
-        console.error("SmartPromptRunner: Send button timeout.");
-        return;
-    }
+        const sendButton = await waitForSendButton();
 
-    sendButton.click();
+        if (!sendButton) {
+            console.error("SmartPromptRunner: Send button timeout.");
+            return;
+        }
+
+        sendButton.click();
+
+    })();
+
 });
 
 const STOP_BUTTON_SELECTOR =
@@ -57,6 +63,9 @@ function detectGenerationState() {
 }
 
 function updateGenerationState() {
+
+    console.log("Observer fired");
+    
     const nextState = detectGenerationState();
 
     if (nextState === generationState) {
@@ -79,14 +88,28 @@ function updateGenerationState() {
         return;
     }
 
-    if (generationState === "finished" && !finishReported) {
+    if (generationState === "finished") {
 
-        finishReported = true;
+        const shareButton = document.querySelector(
+            'button[aria-label="Поделиться этим изображением"],' +
+            'button[aria-label="Share this image"]'
+        );
 
-        chrome.runtime.sendMessage({
-            action: "generationState",
-            state: "finished"
-        });
+        if (shareButton) {
+            console.log("SPR: Share button found");
+        } else {
+            console.log("SPR: Share button NOT found");
+        }
+
+        if (!finishReported) {
+
+            finishReported = true;
+
+            chrome.runtime.sendMessage({
+                action: "generationState",
+                state: "finished"
+            });
+        }
     }
 }
 

@@ -22,10 +22,30 @@ promptFile.addEventListener("change", async () => {
 
     const text = await file.text();
 
+    if (/\r?\n\s*\r?\n/.test(text)) {
+
+    // Новый формат:
+    // один промпт = блок текста,
+    // разделенный пустой строкой
+
+    prompts = text
+        .split(/\r?\n\s*\r?\n/)
+        .map(prompt => prompt.trim())
+        .filter(prompt => prompt.length > 0);
+
+} else {
+
+    // Старый формат:
+    // одна строка = один промпт
+
     prompts = text
         .split(/\r?\n/)
         .map(line => line.trim())
         .filter(line => line.length > 0);
+}
+
+    console.log("Loaded prompts:", prompts.length);
+    console.log(prompts);
 
     loadedCount.textContent = prompts.length;
     progress.textContent = `0 / ${prompts.length}`;

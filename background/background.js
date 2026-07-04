@@ -23,11 +23,23 @@ async function setRunState(active, tabId = null) {
 }
 
 async function sendCurrentPrompt(tabId) {
+
     console.log("BACKGROUND SEND:", currentIndex);
-    await chrome.tabs.sendMessage(tabId, {
-        action: "sendPrompt",
-        prompt: promptQueue[currentIndex]
-    });
+
+    try {
+
+        const response = await chrome.tabs.sendMessage(tabId, {
+            action: "sendPrompt",
+            prompt: promptQueue[currentIndex]
+        });
+
+        console.log("CONTENT RESPONSE:", response);
+
+    } catch (error) {
+
+        console.error("SEND MESSAGE FAILED:", error);
+
+    }
 }
 
 async function handleGenerationFinished(senderTabId) {
