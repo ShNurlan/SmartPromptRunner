@@ -28,12 +28,10 @@ async function sendCurrentPrompt(tabId) {
 
     try {
 
-        const response = await chrome.tabs.sendMessage(tabId, {
+        await chrome.tabs.sendMessage(tabId, {
             action: "sendPrompt",
             prompt: promptQueue[currentIndex]
         });
-
-        console.log("CONTENT RESPONSE:", response);
 
     } catch (error) {
 
@@ -52,17 +50,29 @@ async function handleGenerationFinished(senderTabId) {
 
     currentIndex++;
 
+    await chrome.storage.session.set({
+        progressCurrent: currentIndex + 1,
+        progressTotal: promptQueue.length
+    });
+
     if (currentIndex < promptQueue.length) {
 
         console.log(
             `Next prompt: ${promptQueue[currentIndex]}`
         );
 
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
         await sendCurrentPrompt(runTabId);
         return;
     }
-
+ 
     console.log("Queue completed.");
+
+    await chrome.storage.session.set({
+        progressCurrent: promptQueue.length,
+        progressTotal: promptQueue.length
+    });
 
     await setRunState(false);
 }
@@ -91,7 +101,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     promptQueue = [...message.prompts];
 
     currentIndex = 0;
-
+    
+    chrome.storage.session.set({
+        progressCurrent: 0,
+        progressTotal: promptQueue.length
+    });
     console.log(`Loaded ${promptQueue.length} prompts.`);
 
     sendResponse({ ok: true });
@@ -106,6 +120,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
         try {
             await runStateReady;
+
+            console.log("After runStateReady");
+            console.log("runActive =", runActive);
 
             if (runActive) {
                 sendResponse({
@@ -138,11 +155,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 throw new Error("SmartPromptRunner: Active tab not found.");
             }
             
+            console.log("STEP 1");
+
             currentIndex = 0;
-            
+
+            await chrome.storage.session.set({
+                progressCurrent: 1,
+                progressTotal: promptQueue.length
+            });
+
+            console.log("STEP 2");
+
             await setRunState(true, tab.id);
 
+            console.log("STEP 3");
+
             await sendCurrentPrompt(tab.id);
+
+            console.log("STEP 4");
 
             sendResponse({ ok: true });
         } catch (error) {

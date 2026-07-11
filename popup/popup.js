@@ -5,7 +5,18 @@ const loadedCount = document.getElementById("loadedCount");
 const progress = document.getElementById("progress");
 
 let prompts = [];
+chrome.storage.session
+    .get([
+        "progressCurrent",
+        "progressTotal"
+    ])
+    .then(state => {
 
+        progress.textContent =
+            `${state.progressCurrent ?? 0} / ${state.progressTotal ?? 0}`;
+
+    });
+    
 promptFile.addEventListener("change", async () => {
 
     if (promptFile.files.length === 0) {
@@ -75,4 +86,29 @@ startButton.addEventListener("click", async () => {
         console.error(error);
     }
 
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+
+    if (area !== "session") {
+        return;
+    }
+
+    if (
+        changes.progressCurrent ||
+        changes.progressTotal
+    ) {
+
+        chrome.storage.session
+            .get([
+                "progressCurrent",
+                "progressTotal"
+            ])
+            .then(state => {
+
+                progress.textContent =
+                    `${state.progressCurrent ?? 0} / ${state.progressTotal ?? 0}`;
+
+            });
+    }
 });
